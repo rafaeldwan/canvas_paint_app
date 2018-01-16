@@ -1,0 +1,81 @@
+html {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+h1 {
+  text-align: center;
+}
+h1, h2 {
+  color: rgb(125, 33, 247);
+}
+body {
+  background-color: slategray;
+}
+main {
+  background-color: ghostwhite;
+  box-shadow: 10px 10px 5px -6px rgba(0,0,0,0.4);
+  margin: 10px auto;
+  padding: 10px 20px;
+  width: 840px;
+}
+#maincanvas, figure img {
+  background-color: white;
+}
+#maincanvas {
+  border: 1px solid black;
+  cursor: crosshair;
+}
+
+.toolbuttons {
+  text-align: right;
+  margin: 5px 5px;;
+}
+.brushbuttons {
+  text-align: center;
+  margin: 5px auto;
+}
+
+input, label {
+  margin: 10px auto;
+}
+
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  width: 820px;
+}
+.gallery figure {
+  height: 30%;
+  margin: 0 0 15px 0;
+  width: 33%;
+}
+
+figcaption {
+  margin-top: -175px;
+  margin-bottom: 157px;
+  margin-left: 10px;
+  display: none;
+}
+
+figcaption a {
+  color: rgb(33, 39, 39);
+  text-decoration: none;
+  text-shadow: 2px 2px 1px rgba(0,0,0,0.3);
+  font-weight: bold;
+}
+
+figcaption a:hover {
+  color: blue;
+  text-decoration: underline;
+
+}
+.gallery img {
+  height: 90%;
+  width: 90%;
+  border: 1px solid black;
+  box-shadow: 10px 10px 5px -6px rgba(0,0,0,0.4);
+}
