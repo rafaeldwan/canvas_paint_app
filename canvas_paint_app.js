@@ -33,8 +33,8 @@ var brush = {
     this.clearRect(x - halfsize, y - halfsize, size, size);
   },
   paint(ctx, e) {
-    var x = e.pageX - ctx.canvas.offsetLeft;
-    var y = e.pageY - ctx.canvas.offsetTop;
+    var x = e.offsetX;
+    var y = e.offsetY;
     ctx.strokeStyle = brush.color;
     ctx.fillStyle = brush.color;
 
@@ -166,6 +166,35 @@ var app = {
     var canvas = this.canvas;
     this.clearRect(0, 0, canvas.width, canvas.height);
   },
+  imageToGrayscale() {
+    var imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    var dataArray = imageData.data;
+    var grayData = dataArray.slice(0);
+    for (var i = 0; i < dataArray.length; i += 4) {
+      var red = dataArray[i];
+      var green = dataArray[i + 1];
+      var blue = dataArray[i + 2];
+      var normalized = (red * .3086 + green * .6094 + blue * .0820);
+      grayData[i] = grayData[i + 1] = grayData[i + 2] = normalized;
+    }
+    imageData.data.set(grayData);
+    this.registerCanvasChange();
+    this.ctx.putImageData(imageData, 0, 0);
+  },
+  invertColors() {
+    var imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    var dataArray = imageData.data;
+    var invertData = dataArray.map(function(rgb, i) {
+      if ((i + 1) % 4 === 0) {
+        return rgb;
+      } else {
+        return 255 - rgb;
+      }
+    });
+    imageData.data.set(invertData);
+    this.registerCanvasChange();
+    this.ctx.putImageData(imageData, 0, 0);
+  },
   saveToGallery() {
     // if nothing yet in gallery updates hint text, converts canvas to image data URL,
     // feeds URL to HandlebaHrs template function, appends reslting HTML to the
@@ -219,14 +248,16 @@ var app = {
   undo() {
     var storedCount = this.storedStates.length;
     var redoCount = this.redoStates.length;
+    var stateToRestore;
+    var redoState;
     if (storedCount !== 0) {
       if (storedCount === 1) {
         $('#undo').addClass('pure-button-disabled');
       }
-      var stateToRestore = this.storedStates.pop();
-      var redoState = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      stateToRestore = this.storedStates.pop();
+      redoState = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
       if (redoCount === 0) {
-        $('#redo').removeClass('pure-button-disabled')
+        $('#redo').removeClass('pure-button-disabled');
       }
       this.ctx.putImageData(stateToRestore, 0, 0);
       this.redoStates.push(redoState);
@@ -321,18 +352,24 @@ $(function() {
     $(this).find('figcaption').hide();
   });
 
-  $('#save').click(function() {
-    app.saveToGallery();
+  $('#grayscale').click(function() {
+    app.imageToGrayscale();
   });
 
-  $('#clear').click(function(e) {
-    e.preventDefault();
+  $('#invert').click(function() {
+    app.invertColors();
+  });
+
+  $('#clear').click(function() {
     if (confirm('Clear the canvas?')) {
       app.registerCanvasChange();
       app.clearCanvas.call(app.ctx);
     }
   });
 
+  $('#save').click(function() {
+    app.saveToGallery();
+  });
   $('.gallery').on('click', '.load-on-top', function(e) {
     e.preventDefault();
     app.loadOnTop(this);
