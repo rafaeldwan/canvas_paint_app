@@ -7,28 +7,35 @@ other color picker options
 */
 
 const TREE_TRUNK_RANGE = [50, 80],
-  TREE_WIDTH_RANGE = [4, 6],
-  INITIAL_BRANCH_ANGLE_RANGE = [150, 30]
+  TREE_WIDTH_RANGE = [6, 8],
+  INITIAL_BRANCH_ANGLE_RANGES = [
+    [150, 90],
+    [90, 30]
+  ];
 
 const Tree = {
   currentBranchId: 0,
-  create(){
+  create() {
     let newTree = Object.create(Tree);
     newTree.branchNodes = [];
-    newTree.angleRange = INITIAL_BRANCH_ANGLE_RANGE.slice();
-    newTree.lineWidth = random.int(TREE_WIDTH_RANGE[0],TREE_WIDTH_RANGE[1]);
-    newTree.trunkLength = random.int(TREE_TRUNK_RANGE[0], TREE_TRUNK_RANGE[1]);
+    newTree.leftAngleRange = INITIAL_BRANCH_ANGLE_RANGES[0].slice();
+    newTree.rightAngleRange = INITIAL_BRANCH_ANGLE_RANGES[1].slice();
+
+    newTree.lineWidth = brush.cursorSize //random.int(TREE_WIDTH_RANGE[0], TREE_WIDTH_RANGE[1]);
+    newTree.trunkLength = brush.cursorSize * 5 // random.int(TREE_TRUNK_RANGE[0], TREE_TRUNK_RANGE[1]);
     newTree.branchLength = newTree.trunkLength * 0.75;
     return newTree;
   },
 
   draw(x, y, ctx) {
     let tree = Tree.create()
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.1)";
     // debugger
     ctx.lineWidth = tree.lineWidth;
     tree.drawTrunk(x, y, ctx)
     tree.drawBranches(ctx)
-    ctx.closePath()
+    // ctx.closePath()
     // ctx.stroke()
     console.log(tree.branchNodes)
   },
@@ -40,7 +47,7 @@ const Tree = {
 
     let currentNode = BNode.createInitial(x, y - this.trunkLength)
     ctx.lineTo(currentNode.x, currentNode.y);
-    ctx.stroke()
+    ctx.fill()
     // debugger
     this.branchNodes.push(currentNode)
   },
@@ -52,32 +59,46 @@ const Tree = {
     while (this.lineWidth > 0) {
       // debugger
       // lode current node if exists, otherwise load trunk ending node, generate random angle
-      let currentNode = this.branchNodes.find(node => node.id === currentId) || this.branchNodes[0],
+      let currentNode = this.branchNodes.find(node => node.id === currentId) || this.branchNodes[this.branchNodes.length - 1],
         x = currentNode.x,
         y = currentNode.y,
-        angle = random.angle(this.angleRange)
-
-        let length = this.generatePlacementOnBranch()
-        let newNode = BNode.create(x, y, length, angle);
-
+        angle = this.generateNextAngle(currentNode.children.length),
+        length = this.generatePlacementOnBranch(),
+        newNode = BNode.create(x, y, length, angle);
+      currentNode.children.push(newNode.id);
       this.branchNodes.push(newNode);
 
       this.drawBranch(currentNode, newNode, ctx);
       // debugger;
-      if ((random.rollDice() == 6 && this.lineWidth > 2 ) || (this.lineWidth <= 2 && random.rollDice() == 6 && random.rollDice() == 6)) {
-        this.lineWidth--;
+      if (this.decreaseLineSize()) {
+        this.lineWidth = Math.floor(this.lineWidth * 0.9);
         ctx.lineWidth = this.lineWidth;
       }
       if (random.rollDice() >= 5) {
         this.branchLength *= random.lengthModifer();
       }
-      if (random.rollDice() >= 5) {
-        currentId += random.int(0, 3);
-        this.angleRange[0] += 5;
-        this.angleRange[1] -= 5;
+      if (currentNode.children.length > 2) {
+        currentId += 1;
+        // this.changeAngleRange()
       }
     }
 
+  },
+  decreaseLineSize() {
+
+    return ((random.rollDice() === 6 && this.lineWidth > 2) || (this.lineWidth <= 2 && random.int(0, 100) === 100)) ? true : false;
+  },
+  changeAngleRange() {
+    this.leftAngleRange[0] += 5;
+    this.rightAngleRange[1] -= 5;
+  },
+
+  generateNextAngle(childCount) {
+    if (childCount % 2 === 0) {
+      return random.angle(this.leftAngleRange);
+    } else {
+      return random.angle(this.rightAngleRange);
+    }
   },
 
   drawBranch(currentNode, newNode, ctx) {
@@ -85,10 +106,11 @@ const Tree = {
     ctx.moveTo(currentNode.x, currentNode.y);
     ctx.lineTo(newNode.x, newNode.y)
     ctx.stroke();
+    ctx.closePath();
   },
   generatePlacementOnBranch() {
     if (random.rollDice() > 3) {
-      return this.branchLength / random.int(2,3);
+      return this.branchLength - random.int(2, 3);
     } else {
       return this.branchLength;
     }
@@ -98,8 +120,9 @@ const Tree = {
 
 const BNode = {
   createInitial(x, y) {
-    this.id = 0
+    this.id = 0;
     let newNode = Object.create(BNode);
+    newNode.children = []
     newNode.x = x
     newNode.y = y
     newNode.id = this.id
@@ -108,7 +131,9 @@ const BNode = {
   },
   create(x, y, length, deg) {
     // debugger
+
     let newNode = Object.create(BNode);
+    newNode.children = [];
     newNode.id = this.id++;
     [newNode.x, newNode.y] = this.newNodeCoord(x, y, length, deg)
     return newNode;
@@ -134,10 +159,10 @@ const random = {
     return random.int(range[0], range[1]);
   },
   lengthModifer() {
-    return random.int(8, 11) / 10;
+    return random.int(9, 11) / 10;
   },
   rollDice() {
-    return random.int(1,6);
+    return random.int(1, 6);
   }
 }
 
@@ -159,16 +184,16 @@ var brush = {
   drawTriangle(x, y, size, filled) {
     var halfsize = size / 2;
     this.beginPath();
-    this.moveTo(x, y-halfsize);
-    this.lineTo(x+halfsize, y+halfsize);
-    this.lineTo(x-halfsize, y+halfsize);
+    this.moveTo(x, y - halfsize);
+    this.lineTo(x + halfsize, y + halfsize);
+    this.lineTo(x - halfsize, y + halfsize);
     this.closePath();
     filled ? this.fill() : this.stroke();
   },
   drawSquare(x, y, size, filled) {
     var halfsize = size / 2;
-    filled ? this.fillRect(x - halfsize, y - halfsize, size, size)
-      : this.strokeRect(x - halfsize, y - halfsize, size, size);
+    filled ? this.fillRect(x - halfsize, y - halfsize, size, size) :
+      this.strokeRect(x - halfsize, y - halfsize, size, size);
   },
   drawCircle(x, y, size, filled) {
     var halfsize = size / 2;
@@ -187,29 +212,29 @@ var brush = {
     ctx.fillStyle = brush.color;
 
     switch (brush.type) {
-    case 'tri':
-      brush.drawTriangle.call(ctx, x, y, brush.cursorSize);
-      break;
-    case 'sq':
-      brush.drawSquare.call(ctx, x, y, brush.cursorSize);
-      break;
-    case 'cir':
-      brush.drawCircle.call(ctx, x, y, brush.cursorSize);
-      break;
-    case 'triSld':
-      brush.drawTriangle.call(ctx, x, y, brush.cursorSize, true);
-      break;
-    case 'sqSld':
-      brush.drawSquare.call(ctx, x, y, brush.cursorSize, true);
-      break;
-    case 'cirSld':
-      brush.drawCircle.call(ctx, x, y, brush.cursorSize, true);
-      break;
-    case 'tree':
-      brush.drawTree.call(ctx, x, y);
-      break;
-    default:
-      brush.erase.call(ctx, x, y, brush.cursorSize);
+      case 'tri':
+        brush.drawTriangle.call(ctx, x, y, brush.cursorSize);
+        break;
+      case 'sq':
+        brush.drawSquare.call(ctx, x, y, brush.cursorSize);
+        break;
+      case 'cir':
+        brush.drawCircle.call(ctx, x, y, brush.cursorSize);
+        break;
+      case 'triSld':
+        brush.drawTriangle.call(ctx, x, y, brush.cursorSize, true);
+        break;
+      case 'sqSld':
+        brush.drawSquare.call(ctx, x, y, brush.cursorSize, true);
+        break;
+      case 'cirSld':
+        brush.drawCircle.call(ctx, x, y, brush.cursorSize, true);
+        break;
+      case 'tree':
+        brush.drawTree.call(ctx, x, y);
+        break;
+      default:
+        brush.erase.call(ctx, x, y, brush.cursorSize);
     }
   },
 };
@@ -226,7 +251,9 @@ var ui = {
     this.setCursor();
   },
   resizeBrushButtons() {
-    $('.brushbuttons canvas').each(function() {ui.changeButtonSize(this);});
+    $('.brushbuttons canvas').each(function () {
+      ui.changeButtonSize(this);
+    });
     this.changeButtonSize('#eraser img');
   },
   drawBrushIcons() {
@@ -240,7 +267,7 @@ var ui = {
   drawIcon(id, drawFunction, filled) {
     // gets `button #id`'s canvas element, clears it, then draws the shape specified by
     // the drawFunction callback argument with the current brush color and size as arguments
-    var btnCanvas = $(id +' canvas').get(0);
+    var btnCanvas = $(id + ' canvas').get(0);
     var btnCtx = btnCanvas.getContext('2d');
     var x = brush.cursorSize / 2;
     var y = brush.cursorSize / 2;
@@ -263,7 +290,7 @@ var ui = {
     // since eraser icon is an image jQuery has draw it to canvas
     // for the first time after its `load` event fires
     this.eraserIcon.src = 'images/remove.png';
-    this.eraserIcon.onload = function() {
+    this.eraserIcon.onload = function () {
       ui.drawEraserIcon();
     };
   },
@@ -274,7 +301,7 @@ var ui = {
   },
   loadTreeIcon() {
     this.treeIcon.src = 'images/tree.png';
-    this.treeIcon.onload = function() {
+    this.treeIcon.onload = function () {
       ui.drawTreeIcon();
     };
   },
@@ -302,11 +329,11 @@ var ui = {
 var app = {
   init() {
     // create handlebars function for gallery figure template, set the canvas and context attributes
-    var galleryHtml =  $('#gallery_image_template').html();
+    var galleryHtml = $('#gallery_image_template').html();
     this.canvas = document.getElementById('maincanvas');
     this.ctx = this.canvas.getContext('2d');
-    this.makeGalleryFig =  Handlebars.compile(galleryHtml),
-    this.renderGallery();
+    this.makeGalleryFig = Handlebars.compile(galleryHtml),
+      this.renderGallery();
     this.loadCustomColors();
   },
   gallery: [],
@@ -316,7 +343,9 @@ var app = {
     if (galleryJSON !== null && galleryJSON !== 'null' && galleryJSON !== '[]') {
       this.gallery = JSON.parse(galleryJSON);
       $('p i').text('Right click thumbnail and select "Save image as..." to save');
-      var galleryHtml = this.makeGalleryFig({images: this.gallery});
+      var galleryHtml = this.makeGalleryFig({
+        images: this.gallery
+      });
       $('.gallery').append(galleryHtml);
     }
   },
@@ -327,7 +356,7 @@ var app = {
     var colorsJSON = localStorage.getItem('customColors');
     if (colorsJSON !== null && colorsJSON !== 'null') {
       this.customColors = JSON.parse(colorsJSON);
-      this.customColors.forEach(function(color) {
+      this.customColors.forEach(function (color) {
         var option = document.createElement('option');
         $(option).attr('value', color);
         $('datalist').append(option);
@@ -356,7 +385,7 @@ var app = {
   invertColors() {
     var imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
     var dataArray = imageData.data;
-    var invertData = dataArray.map(function(rgb, i) {
+    var invertData = dataArray.map(function (rgb, i) {
       if ((i + 1) % 4 === 0) {
         return rgb;
       } else {
@@ -375,7 +404,9 @@ var app = {
       $('p i').text('Right click thumbnail and select "Save image as..." to save');
     }
     var img_src = this.canvas.toDataURL('png');
-    var galleryHtml = app.makeGalleryFig({images: [img_src]});
+    var galleryHtml = app.makeGalleryFig({
+      images: [img_src]
+    });
     $('.gallery').append(galleryHtml);
     app.gallery.push(img_src);
   },
@@ -387,7 +418,7 @@ var app = {
   },
   loadOnTop(el) {
     this.registerCanvasChange();
-    var img  = $(el).parents('figure').find('img').get(0);
+    var img = $(el).parents('figure').find('img').get(0);
     this.ctx.drawImage(img, 0, 0);
   },
   loadToGallery(el) {
@@ -452,37 +483,37 @@ var app = {
 // * jQuery *
 // **********
 
-$(function() {
+$(function () {
   app.init();
   ui.init();
 
-  $(app.canvas).mousedown(function(e) {
+  $(app.canvas).mousedown(function (e) {
     app.registerCanvasChange();
     brush.tipDown = true;
     brush.paint(app.ctx, e);
   });
 
-  $(app.canvas).mousemove(function(e) {
+  $(app.canvas).mousemove(function (e) {
     if (brush.tipDown) {
       brush.paint(app.ctx, e);
     }
   });
 
-  $(window).mouseup(function() {
+  $(window).mouseup(function () {
     if (brush.tipDown) {
       brush.tipDown = false;
     }
   });
 
-  $('#undo').click(function() {
+  $('#undo').click(function () {
     app.undo();
   });
 
-  $('#redo').click('#redo', function() {
+  $('#redo').click('#redo', function () {
     app.redo();
   });
 
-  $('.brushbuttons').on('click', 'button', function() {
+  $('.brushbuttons').on('click', 'button', function () {
     $('.pure-button-active').removeClass('pure-button-active');
     $(this).addClass('pure-button-active');
     brush.type = this.id;
@@ -490,7 +521,7 @@ $(function() {
   });
 
   // when color text input changes, update brush.color and redraw the button icons in the new color, update cursor
-  $('#color').on('input', function() {
+  $('#color').on('input', function () {
     var colorVal = $('#color').delay(100).val();
     if (colorVal) {
       brush.color = colorVal;
@@ -502,14 +533,14 @@ $(function() {
 
   // when focus is taken off color text input, add new color to hint list if
   // it is not already there (avoids adding every keystroke to list)
-  $('#color').blur(function() {
+  $('#color').blur(function () {
     if ($('#colorlist').find('option[value="' + brush.color + '"]').length === 0) {
       $('#colorlist').append('<option value="' + brush.color + '">');
       app.customColors.push(brush.color);
     }
   });
 
-  $('#brushsize').on('input', function() {
+  $('#brushsize').on('input', function () {
     brush.cursorSize = +$(this).val();
     ui.resizeBrushButtons();
     ui.drawBrushIcons();
@@ -517,50 +548,50 @@ $(function() {
     ui.setCursor();
   });
 
-  $('.gallery').on('mouseenter', 'figure', function() {
+  $('.gallery').on('mouseenter', 'figure', function () {
     $(this).find('figcaption').show();
   });
 
-  $('.gallery').on('mouseleave', 'figure', function() {
+  $('.gallery').on('mouseleave', 'figure', function () {
     $(this).find('figcaption').hide();
   });
 
-  $('#grayscale').click(function() {
+  $('#grayscale').click(function () {
     app.imageToGrayscale();
   });
 
-  $('#invert').click(function() {
+  $('#invert').click(function () {
     app.invertColors();
   });
 
-  $('#clear').click(function() {
+  $('#clear').click(function () {
     if (confirm('Clear the canvas?')) {
       app.registerCanvasChange();
       app.clearCanvas.call(app.ctx);
     }
   });
 
-  $('#save').click(function() {
+  $('#save').click(function () {
     app.saveToGallery();
   });
-  $('.gallery').on('click', '.load-on-top', function(e) {
+  $('.gallery').on('click', '.load-on-top', function (e) {
     e.preventDefault();
     app.loadOnTop(this);
   });
 
-  $('.gallery').on('click', '.load', function(e) {
+  $('.gallery').on('click', '.load', function (e) {
     e.preventDefault();
     app.loadToGallery(this);
   });
 
-  $('.gallery').on('click', '.delete', function(e) {
+  $('.gallery').on('click', '.delete', function (e) {
     e.preventDefault();
     if (confirm('Permanently delete this image?')) {
       app.delete(this);
     }
   });
 
-  $(window).keydown(function(e) {
+  $(window).keydown(function (e) {
     // binds Ctrl/Cmd-Z to Undo, Ctrl/Cmd Y and Ctrl/Cmd+Shift+Z to Redo
     if (e.ctrlKey || e.metaKey) {
       if (e.which === 90) {
@@ -576,7 +607,7 @@ $(function() {
   });
 
   // when window closes or reloads updates localStorage gallery
-  $(window).on('unload', function() {
+  $(window).on('unload', function () {
     app.updateLocalStorage();
   });
 });
