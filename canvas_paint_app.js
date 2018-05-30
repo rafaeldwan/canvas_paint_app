@@ -1,3 +1,146 @@
+/* todo:
+split into multiple files
+add transparency slider
+refactor png button icons loading and drawing - easier to add new brushes without adding ui functions
+"save current color as a button" w/color gallery
+other color picker options
+*/
+
+const TREE_TRUNK_RANGE = [50, 80],
+  TREE_WIDTH_RANGE = [4, 6],
+  INITIAL_BRANCH_ANGLE_RANGE = [150, 30]
+
+const Tree = {
+  currentBranchId: 0,
+  create(){
+    let newTree = Object.create(Tree);
+    newTree.branchNodes = [];
+    newTree.angleRange = INITIAL_BRANCH_ANGLE_RANGE.slice();
+    newTree.lineWidth = random.int(TREE_WIDTH_RANGE[0],TREE_WIDTH_RANGE[1]);
+    newTree.trunkLength = random.int(TREE_TRUNK_RANGE[0], TREE_TRUNK_RANGE[1]);
+    newTree.branchLength = newTree.trunkLength * 0.75;
+    return newTree;
+  },
+
+  draw(x, y, ctx) {
+    let tree = Tree.create()
+    // debugger
+    ctx.lineWidth = tree.lineWidth;
+    tree.drawTrunk(x, y, ctx)
+    tree.drawBranches(ctx)
+    ctx.closePath()
+    // ctx.stroke()
+    console.log(tree.branchNodes)
+  },
+  drawTrunk(x, y, ctx) {
+    // debugger
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+
+    let currentNode = BNode.createInitial(x, y - this.trunkLength)
+    ctx.lineTo(currentNode.x, currentNode.y);
+    ctx.stroke()
+    // debugger
+    this.branchNodes.push(currentNode)
+  },
+  drawBranches(ctx) {
+    ctx.lineJoin = 'round';
+    let currentId = 0;
+    this.lineWidth--;
+    // debugger;
+    while (this.lineWidth > 0) {
+      // debugger
+      // lode current node if exists, otherwise load trunk ending node, generate random angle
+      let currentNode = this.branchNodes.find(node => node.id === currentId) || this.branchNodes[0],
+        x = currentNode.x,
+        y = currentNode.y,
+        angle = random.angle(this.angleRange)
+
+        let length = this.generatePlacementOnBranch()
+        let newNode = BNode.create(x, y, length, angle);
+
+      this.branchNodes.push(newNode);
+
+      this.drawBranch(currentNode, newNode, ctx);
+      // debugger;
+      if ((random.rollDice() == 6 && this.lineWidth > 2 ) || (this.lineWidth <= 2 && random.rollDice() == 6 && random.rollDice() == 6)) {
+        this.lineWidth--;
+        ctx.lineWidth = this.lineWidth;
+      }
+      if (random.rollDice() >= 5) {
+        this.branchLength *= random.lengthModifer();
+      }
+      if (random.rollDice() >= 5) {
+        currentId += random.int(0, 3);
+        this.angleRange[0] += 5;
+        this.angleRange[1] -= 5;
+      }
+    }
+
+  },
+
+  drawBranch(currentNode, newNode, ctx) {
+
+    ctx.moveTo(currentNode.x, currentNode.y);
+    ctx.lineTo(newNode.x, newNode.y)
+    ctx.stroke();
+  },
+  generatePlacementOnBranch() {
+    if (random.rollDice() > 3) {
+      return this.branchLength / random.int(2,3);
+    } else {
+      return this.branchLength;
+    }
+  },
+
+};
+
+const BNode = {
+  createInitial(x, y) {
+    this.id = 0
+    let newNode = Object.create(BNode);
+    newNode.x = x
+    newNode.y = y
+    newNode.id = this.id
+
+    return newNode;
+  },
+  create(x, y, length, deg) {
+    // debugger
+    let newNode = Object.create(BNode);
+    newNode.id = this.id++;
+    [newNode.x, newNode.y] = this.newNodeCoord(x, y, length, deg)
+    return newNode;
+  },
+  newNodeCoord(x, y, length, deg) {
+    let rads = this.toRad(deg);
+    let newX = x + parseInt(length * Math.cos(rads));
+    let newY = y - parseInt(length * Math.sin(rads));
+    console.log(newX, newY, deg, rads);
+
+    return [newX, newY];
+  },
+  toRad(deg) {
+    return deg * (Math.PI / 180)
+  },
+};
+
+const random = {
+  int(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  },
+  angle(range) {
+    return random.int(range[0], range[1]);
+  },
+  lengthModifer() {
+    return random.int(8, 11) / 10;
+  },
+  rollDice() {
+    return random.int(1,6);
+  }
+}
+
 // *********
 // * brush *
 // *********
@@ -8,6 +151,11 @@ var brush = {
   color: 'rgba(0, 102, 204, .7)',
   tipDown: false,
   // drawShape functions -must be called by a canvas' context
+
+  drawTree(x, y) {
+    Tree.draw(x, y, this)
+  },
+
   drawTriangle(x, y, size, filled) {
     var halfsize = size / 2;
     this.beginPath();
@@ -57,6 +205,9 @@ var brush = {
     case 'cirSld':
       brush.drawCircle.call(ctx, x, y, brush.cursorSize, true);
       break;
+    case 'tree':
+      brush.drawTree.call(ctx, x, y);
+      break;
     default:
       brush.erase.call(ctx, x, y, brush.cursorSize);
     }
@@ -71,7 +222,7 @@ var ui = {
   init() {
     this.resizeBrushButtons();
     this.drawBrushIcons();
-    this.loadEraserIcon();
+    this.loadPngIcons();
     this.setCursor();
   },
   resizeBrushButtons() {
@@ -99,6 +250,15 @@ var ui = {
     drawFunction.call(btnCtx, x, y, brush.cursorSize, filled);
   },
   eraserIcon: document.createElement('img'),
+  treeIcon: document.createElement('img'),
+  loadPngIcons() {
+    this.loadEraserIcon();
+    this.loadTreeIcon();
+  },
+  drawPngIcons() {
+    this.drawEraserIcon();
+    this.drawTreeIcon();
+  },
   loadEraserIcon() {
     // since eraser icon is an image jQuery has draw it to canvas
     // for the first time after its `load` event fires
@@ -111,6 +271,18 @@ var ui = {
     var eraserCtx = $('#eraser canvas').get(0).getContext('2d');
     app.clearCanvas.call(eraserCtx);
     eraserCtx.drawImage(ui.eraserIcon, 0, 0, brush.cursorSize, brush.cursorSize);
+  },
+  loadTreeIcon() {
+    this.treeIcon.src = 'images/tree.png';
+    this.treeIcon.onload = function() {
+      ui.drawTreeIcon();
+    };
+  },
+  drawTreeIcon() {
+    $('#tree').css('color', brush.color);
+    var iconCtx = $('#tree canvas').get(0).getContext('2d');
+    app.clearCanvas.call(iconCtx);
+    iconCtx.drawImage(ui.treeIcon, 0, 0, brush.cursorSize, brush.cursorSize);
   },
   setCursor() {
     var cursor = document.querySelector('.pure-button-active canvas').toDataURL('png');
@@ -324,6 +496,7 @@ $(function() {
       brush.color = colorVal;
     }
     ui.drawBrushIcons();
+    ui.drawTreeIcon();
     ui.setCursor();
   });
 
@@ -340,7 +513,7 @@ $(function() {
     brush.cursorSize = +$(this).val();
     ui.resizeBrushButtons();
     ui.drawBrushIcons();
-    ui.drawEraserIcon();
+    ui.drawPngIcons();
     ui.setCursor();
   });
 
