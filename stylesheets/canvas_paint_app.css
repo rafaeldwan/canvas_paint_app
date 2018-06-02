@@ -87,3 +87,8 @@ figcaption a:hover {
 #color {
   width: 14.7em;
 }
+
+.tree-options {
+  display: none;
+  text-align: center;
+}

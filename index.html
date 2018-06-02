@@ -29,9 +29,15 @@
     <button id="eraser" class="pure-button"><canvas width="12" height="12"></canvas></button>
     <button id="tree" class="pure-button"><canvas width="12" height="12"></canvas>Tree</button>
   </div>
+  <div class="tree-options">
+    <label for="tree-shadow">Tree Shadow </label>
+    <input type="checkbox" id="tree-shadow" checked>
+    <label for="tree-shadow-blur">Shadow blur </label>
+    <input type="range" name="tree-shadow-blur" id="tree-shadow-blur" max="200" min="0" value="1" autocomplete="off">
+  </div>
   <div>
     <label for="brushsize">Brush Size: </label>
-    <input type="range" id="brushsize" max='81' min='1' value=12 autocomplete="off">
+    <input type="range" id="brushsize" max="81" min="1" value="12" autocomplete="off">
   </div>
   <div>
     <label for="color">Color: </label>

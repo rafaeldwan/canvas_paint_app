@@ -1,17 +1,6 @@
-/* todo:
-split into multiple files
-add transparency slider
-refactor png button icons loading and drawing - easier to add new brushes without adding ui functions
-"save current color as a button" w/color gallery
-other color picker options
-*/
-
-const TREE_TRUNK_RANGE = [50, 80],
-  TREE_WIDTH_RANGE = [6, 8],
-  INITIAL_BRANCH_ANGLE_RANGES = [
-    [150, 90],
-    [90, 30]
-  ];
+const INITIAL_BRANCH_ANGLE_RANGES = [[150, 90], [90, 30]],
+  TRUNK_SCALE = 7, // brush size multiplied by this for trunk length
+  TRUNK_TO_FIRST_BRANCH_SCALE = 0.6;
 
 const Tree = {
   currentBranchId: 0,
@@ -21,23 +10,26 @@ const Tree = {
     newTree.leftAngleRange = INITIAL_BRANCH_ANGLE_RANGES[0].slice();
     newTree.rightAngleRange = INITIAL_BRANCH_ANGLE_RANGES[1].slice();
 
-    newTree.lineWidth = brush.cursorSize //random.int(TREE_WIDTH_RANGE[0], TREE_WIDTH_RANGE[1]);
-    newTree.trunkLength = brush.cursorSize * 5 // random.int(TREE_TRUNK_RANGE[0], TREE_TRUNK_RANGE[1]);
-    newTree.branchLength = newTree.trunkLength * 0.75;
+    newTree.lineWidth = brush.cursorSize; //random.int(TREE_WIDTH_RANGE[0], TREE_WIDTH_RANGE[1]);
+    newTree.trunkLength = brush.cursorSize * TRUNK_SCALE; // random.int(TREE_TRUNK_RANGE[0], TREE_TRUNK_RANGE[1]);
+    newTree.branchLength = newTree.trunkLength * TRUNK_TO_FIRST_BRANCH_SCALE;
     return newTree;
   },
 
   draw(x, y, ctx) {
-    let tree = Tree.create()
-    ctx.shadowBlur = 2;
-    ctx.shadowColor = "rgba(0,0,0,0.1)";
-    // debugger
+    let tree = Tree.create();
+
+    this.applyShadow(ctx);
+
     ctx.lineWidth = tree.lineWidth;
-    tree.drawTrunk(x, y, ctx)
-    tree.drawBranches(ctx)
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    tree.drawTrunk(x, y, ctx);
+    tree.drawBranches(ctx);
     // ctx.closePath()
     // ctx.stroke()
-    console.log(tree.branchNodes)
+    // console.log(tree.branchNodes)
   },
   drawTrunk(x, y, ctx) {
     // debugger
@@ -45,14 +37,14 @@ const Tree = {
     ctx.beginPath();
     ctx.moveTo(x, y);
 
-    let currentNode = BNode.createInitial(x, y - this.trunkLength)
+    let currentNode = BNode.createInitial(x, y - this.trunkLength);
     ctx.lineTo(currentNode.x, currentNode.y);
-    ctx.fill()
+    ctx.fill();
     // debugger
-    this.branchNodes.push(currentNode)
+    this.branchNodes.push(currentNode);
   },
   drawBranches(ctx) {
-    ctx.lineJoin = 'round';
+
     let currentId = 0;
     this.lineWidth--;
     // debugger;
@@ -63,8 +55,7 @@ const Tree = {
         x = currentNode.x,
         y = currentNode.y,
         angle = this.generateNextAngle(currentNode.children.length),
-        length = this.generatePlacementOnBranch(),
-        newNode = BNode.create(x, y, length, angle);
+        newNode = BNode.create(x, y, this.branchLength, angle);
       currentNode.children.push(newNode.id);
       this.branchNodes.push(newNode);
 
@@ -75,7 +66,8 @@ const Tree = {
         ctx.lineWidth = this.lineWidth;
       }
       if (random.rollDice() >= 5) {
-        this.branchLength *= random.lengthModifer();
+        if (this.lineWidth > 2) { this.branchLength *= random.lengthModifer()
+        } else { this.branchLength = this.trunkLength / 10 * random.lengthModifier(); }
       }
       if (currentNode.children.length > 2) {
         currentId += 1;
@@ -84,9 +76,22 @@ const Tree = {
     }
 
   },
-  decreaseLineSize() {
+  applyShadow(ctx) {
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
 
-    return ((random.rollDice() === 6 && this.lineWidth > 2) || (this.lineWidth <= 2 && random.int(0, 100) === 100)) ? true : false;
+
+    if ($('#tree-shadow').prop('checked')) {
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+      ctx.shadowBlur = +$('#tree-shadow-blur').val();
+    } else {
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+  },
+  decreaseLineSize() {
+    return ((random.rollDice() === 6 && this.lineWidth > 2) || (this.lineWidth <= 2 && random.int(0, 50) === 50)) ? true : false;
   },
   changeAngleRange() {
     this.leftAngleRange[0] += 5;
@@ -94,7 +99,7 @@ const Tree = {
   },
 
   generateNextAngle(childCount) {
-    if (childCount % 2 === 0) {
+    if (childCount % 2 !== 0) {
       return random.angle(this.leftAngleRange);
     } else {
       return random.angle(this.rightAngleRange);
@@ -102,30 +107,27 @@ const Tree = {
   },
 
   drawBranch(currentNode, newNode, ctx) {
-
+    let yModifier = this.branchLength / 3,
+      xModifier = this.branchLength / 20;
     ctx.moveTo(currentNode.x, currentNode.y);
-    ctx.lineTo(newNode.x, newNode.y)
-    ctx.stroke();
-    ctx.closePath();
-  },
-  generatePlacementOnBranch() {
-    if (random.rollDice() > 3) {
-      return this.branchLength - random.int(2, 3);
+    if (newNode.x < this.branchNodes[0].x) {
+      ctx.bezierCurveTo(currentNode.x + xModifier, currentNode.y - yModifier, currentNode.x + xModifier, newNode.y + yModifier, newNode.x, newNode.y);
     } else {
-      return this.branchLength;
+      ctx.bezierCurveTo(currentNode.x - xModifier, currentNode.y - yModifier, currentNode.x - xModifier, newNode.y + yModifier, newNode.x, newNode.y);
     }
+    // ctx.lineTo(newNode.x, newNode.y)
+    ctx.stroke();
   },
-
 };
 
 const BNode = {
   createInitial(x, y) {
     this.id = 0;
     let newNode = Object.create(BNode);
-    newNode.children = []
-    newNode.x = x
-    newNode.y = y
-    newNode.id = this.id
+    newNode.children = [];
+    newNode.x = x;
+    newNode.y = y;
+    newNode.id = this.id;
 
     return newNode;
   },
@@ -135,19 +137,19 @@ const BNode = {
     let newNode = Object.create(BNode);
     newNode.children = [];
     newNode.id = this.id++;
-    [newNode.x, newNode.y] = this.newNodeCoord(x, y, length, deg)
+    [newNode.x, newNode.y] = this.newNodeCoord(x, y, length, deg);
     return newNode;
   },
   newNodeCoord(x, y, length, deg) {
     let rads = this.toRad(deg);
     let newX = x + parseInt(length * Math.cos(rads));
     let newY = y - parseInt(length * Math.sin(rads));
-    console.log(newX, newY, deg, rads);
+    // console.log(newX, newY, deg, rads);
 
     return [newX, newY];
   },
   toRad(deg) {
-    return deg * (Math.PI / 180)
+    return deg * (Math.PI / 180);
   },
 };
 
@@ -164,7 +166,7 @@ const random = {
   rollDice() {
     return random.int(1, 6);
   }
-}
+};
 
 // *********
 // * brush *
@@ -178,7 +180,7 @@ var brush = {
   // drawShape functions -must be called by a canvas' context
 
   drawTree(x, y) {
-    Tree.draw(x, y, this)
+    Tree.draw(x, y, this);
   },
 
   drawTriangle(x, y, size, filled) {
@@ -212,29 +214,29 @@ var brush = {
     ctx.fillStyle = brush.color;
 
     switch (brush.type) {
-      case 'tri':
-        brush.drawTriangle.call(ctx, x, y, brush.cursorSize);
-        break;
-      case 'sq':
-        brush.drawSquare.call(ctx, x, y, brush.cursorSize);
-        break;
-      case 'cir':
-        brush.drawCircle.call(ctx, x, y, brush.cursorSize);
-        break;
-      case 'triSld':
-        brush.drawTriangle.call(ctx, x, y, brush.cursorSize, true);
-        break;
-      case 'sqSld':
-        brush.drawSquare.call(ctx, x, y, brush.cursorSize, true);
-        break;
-      case 'cirSld':
-        brush.drawCircle.call(ctx, x, y, brush.cursorSize, true);
-        break;
-      case 'tree':
-        brush.drawTree.call(ctx, x, y);
-        break;
-      default:
-        brush.erase.call(ctx, x, y, brush.cursorSize);
+    case 'tri':
+      brush.drawTriangle.call(ctx, x, y, brush.cursorSize);
+      break;
+    case 'sq':
+      brush.drawSquare.call(ctx, x, y, brush.cursorSize);
+      break;
+    case 'cir':
+      brush.drawCircle.call(ctx, x, y, brush.cursorSize);
+      break;
+    case 'triSld':
+      brush.drawTriangle.call(ctx, x, y, brush.cursorSize, true);
+      break;
+    case 'sqSld':
+      brush.drawSquare.call(ctx, x, y, brush.cursorSize, true);
+      break;
+    case 'cirSld':
+      brush.drawCircle.call(ctx, x, y, brush.cursorSize, true);
+      break;
+    case 'tree':
+      brush.drawTree.call(ctx, x, y);
+      break;
+    default:
+      brush.erase.call(ctx, x, y, brush.cursorSize);
     }
   },
 };
@@ -333,7 +335,7 @@ var app = {
     this.canvas = document.getElementById('maincanvas');
     this.ctx = this.canvas.getContext('2d');
     this.makeGalleryFig = Handlebars.compile(galleryHtml),
-      this.renderGallery();
+    this.renderGallery();
     this.loadCustomColors();
   },
   gallery: [],
@@ -517,7 +519,17 @@ $(function () {
     $('.pure-button-active').removeClass('pure-button-active');
     $(this).addClass('pure-button-active');
     brush.type = this.id;
+    brush.type === 'tree' ? $('.tree-options').slideDown() : $('.tree-options').slideUp();
     ui.setCursor();
+  });
+
+  $('#tree-shadow').click(() => {
+    let $treeShadowBlur = $('#tree-shadow-blur');
+    if ($treeShadowBlur.attr('disabled')) {
+      $treeShadowBlur.removeAttr('disabled');
+    } else {
+      $treeShadowBlur.attr('disabled', 'disabled');
+    }
   });
 
   // when color text input changes, update brush.color and redraw the button icons in the new color, update cursor
