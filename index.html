@@ -9,11 +9,11 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.js"></script>
   <script src="canvas_paint_app.js"></script>
-  <title>Draw!</title>
+  <title>Draw something!</title>
 </head>
 <body>
   <main>
-  <h1>Paint app!</h1>
+  <h1>Draw something!</h1>
   <canvas id="maincanvas" width="800" height="600"></canvas>
   <div class="pure-button-group toolbuttons">
     <button  class="pure-button pure-button-disabled" id="undo"><img src="images/undo.png"></button>
@@ -29,11 +29,11 @@
     <button id="eraser" class="pure-button"><canvas width="12" height="12"></canvas></button>
     <button id="tree" class="pure-button"><canvas width="12" height="12"></canvas>Tree</button>
   </div>
-  <div class="tree-options">
-    <label for="tree-shadow">Tree Shadow </label>
-    <input type="checkbox" id="tree-shadow" checked>
-    <label for="tree-shadow-blur">Shadow blur </label>
-    <input type="range" name="tree-shadow-blur" id="tree-shadow-blur" max="200" min="0" value="1" autocomplete="off">
+  <div class="brush-options">
+    <label for="shadow">Shadow </label>
+    <input type="checkbox" id="shadow">
+    <label for="shadow-blur" class="disabled">Shadow blur </label>
+    <input type="range" name="shadow-blur" id="shadow-blur" max="200" min="0" value="1" autocomplete="off" disabled>
   </div>
   <div>
     <label for="brushsize">Brush Size: </label>
@@ -54,7 +54,9 @@
       <option value="white">
     </datalist>
     <a href="https://en.wikipedia.org/wiki/Web_colors">Find out more about valid colors here</a>
-  </div>
+    <input type="color" name="colorPicker" id="colorPicker" value="#0066CC">
+    <label for="opacity">Opacity: </label>
+    <input type="range" id="opacity" max="10" min="1" value="7" autocomplete="off">  </div>
   <div>
     <button id="grayscale">Make Grayscale</button>
     <button id="invert">Invert Colors</button>

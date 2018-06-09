@@ -1,6 +1,8 @@
 const INITIAL_BRANCH_ANGLE_RANGES = [[150, 90], [90, 30]],
-  TRUNK_SCALE = 7, // brush size multiplied by this for trunk length
+  TRUNK_SCALE = 7, // multiplied by brush size for trunk length
   TRUNK_TO_FIRST_BRANCH_SCALE = 0.6;
+
+const INITIAL_BRUSH_COLOR = 'rgba(0, 102, 204, .7)'
 
 const Tree = {
   currentBranchId: 0,
@@ -19,11 +21,9 @@ const Tree = {
   draw(x, y, ctx) {
     let tree = Tree.create();
 
-    this.applyShadow(ctx);
-
     ctx.lineWidth = tree.lineWidth;
     ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    ctx.lineCap = 'butt';
 
     tree.drawTrunk(x, y, ctx);
     tree.drawBranches(ctx);
@@ -32,21 +32,23 @@ const Tree = {
     // console.log(tree.branchNodes)
   },
   drawTrunk(x, y, ctx) {
-    // debugger
+
 
     ctx.beginPath();
     ctx.moveTo(x, y);
 
     let currentNode = BNode.createInitial(x, y - this.trunkLength);
     ctx.lineTo(currentNode.x, currentNode.y);
-    ctx.fill();
-    // debugger
+    console.log(ctx.strokeStyle)
+    ctx.stroke();
+    ctx.closePath()
     this.branchNodes.push(currentNode);
   },
   drawBranches(ctx) {
 
     let currentId = 0;
     this.lineWidth--;
+
     // debugger;
     while (this.lineWidth > 0) {
       // debugger
@@ -63,11 +65,14 @@ const Tree = {
       // debugger;
       if (this.decreaseLineSize()) {
         this.lineWidth = Math.floor(this.lineWidth * 0.9);
+        ctx.stroke()
+        ctx.closePath()
+        ctx.beginPath()
         ctx.lineWidth = this.lineWidth;
       }
       if (random.rollDice() >= 5) {
-        if (this.lineWidth > 2) { this.branchLength *= random.lengthModifer()
-        } else { this.branchLength = this.trunkLength / 10 * random.lengthModifier(); }
+        if (this.lineWidth > 2) { this.branchLength *= random.lengthModifier();
+        } else { this.branchLength = this.branchLength * 0.9 * random.lengthModifier(); }
       }
       if (currentNode.children.length > 2) {
         currentId += 1;
@@ -76,26 +81,13 @@ const Tree = {
     }
 
   },
-  applyShadow(ctx) {
-    ctx.shadowColor = 'rgba(0,0,0,0.1)';
 
-
-    if ($('#tree-shadow').prop('checked')) {
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 2;
-      ctx.shadowBlur = +$('#tree-shadow-blur').val();
-    } else {
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-    }
-  },
   decreaseLineSize() {
     return ((random.rollDice() === 6 && this.lineWidth > 2) || (this.lineWidth <= 2 && random.int(0, 50) === 50)) ? true : false;
   },
   changeAngleRange() {
-    this.leftAngleRange[0] += 5;
-    this.rightAngleRange[1] -= 5;
+    this.leftAngleRange[0] -= 5;
+    this.rightAngleRange[1] += 5;
   },
 
   generateNextAngle(childCount) {
@@ -109,6 +101,7 @@ const Tree = {
   drawBranch(currentNode, newNode, ctx) {
     let yModifier = this.branchLength / 3,
       xModifier = this.branchLength / 20;
+    ctx.beginPath();
     ctx.moveTo(currentNode.x, currentNode.y);
     if (newNode.x < this.branchNodes[0].x) {
       ctx.bezierCurveTo(currentNode.x + xModifier, currentNode.y - yModifier, currentNode.x + xModifier, newNode.y + yModifier, newNode.x, newNode.y);
@@ -117,6 +110,8 @@ const Tree = {
     }
     // ctx.lineTo(newNode.x, newNode.y)
     ctx.stroke();
+    ctx.closePath();
+
   },
 };
 
@@ -160,7 +155,7 @@ const random = {
   angle(range) {
     return random.int(range[0], range[1]);
   },
-  lengthModifer() {
+  lengthModifier() {
     return random.int(9, 11) / 10;
   },
   rollDice() {
@@ -210,9 +205,7 @@ var brush = {
   paint(ctx, e) {
     var x = e.offsetX;
     var y = e.offsetY;
-    ctx.strokeStyle = brush.color;
-    ctx.fillStyle = brush.color;
-
+    this.applyShadow(ctx);
     switch (brush.type) {
     case 'tri':
       brush.drawTriangle.call(ctx, x, y, brush.cursorSize);
@@ -237,6 +230,20 @@ var brush = {
       break;
     default:
       brush.erase.call(ctx, x, y, brush.cursorSize);
+    }
+  },
+  applyShadow(ctx) {
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+
+
+    if ($('#shadow').prop('checked')) {
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+      ctx.shadowBlur = +$('#shadow-blur').val();
+    } else {
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
     }
   },
 };
@@ -289,7 +296,7 @@ var ui = {
     this.drawTreeIcon();
   },
   loadEraserIcon() {
-    // since eraser icon is an image jQuery has draw it to canvas
+    // since eraser and tree icons are an image jQuery has draw it to canvas
     // for the first time after its `load` event fires
     this.eraserIcon.src = 'images/remove.png';
     this.eraserIcon.onload = function () {
@@ -322,6 +329,17 @@ var ui = {
     $('button canvas').attr('width', brush.cursorSize);
     $('button canvas').attr('height', brush.cursorSize);
   },
+  update(colorInfo) {
+    ui.drawBrushIcons();
+    ui.drawTreeIcon();
+    ui.setCursor();
+    ui.setColorControls(colorInfo)
+  },
+  setColorControls(colorInfo) {
+    $('#colorPicker').val(colorInfo[0])
+    $('#color').val(brush.color)
+    $('#opacity').val(colorInfo[1])
+  },
 };
 
 // *******
@@ -334,6 +352,8 @@ var app = {
     var galleryHtml = $('#gallery_image_template').html();
     this.canvas = document.getElementById('maincanvas');
     this.ctx = this.canvas.getContext('2d');
+    this.ctx.strokeStyle = INITIAL_BRUSH_COLOR;
+    this.ctx.fillStyle = INITIAL_BRUSH_COLOR;
     this.makeGalleryFig = Handlebars.compile(galleryHtml),
     this.renderGallery();
     this.loadCustomColors();
@@ -364,6 +384,46 @@ var app = {
         $('datalist').append(option);
       });
     }
+  },
+
+
+
+  setPrimaryColor(colorVal) {
+    if (colorVal) {
+      brush.color = colorVal;
+    }
+
+    this.ctx.strokeStyle = brush.color;
+    this.ctx.fillStyle = brush.color;
+    let colorInfo = this.getColorInfo(this.ctx.strokeStyle);
+    console.log(colorInfo)
+    ui.update(colorInfo);
+  },
+  getColorInfo(string) {
+    return string[0] === '#' ? [string, 10] : this.infoFromRgba(string); // transform value to hex
+  },
+  infoFromRgba(string) {
+
+    let values = string.match(/0?\.?\d+/g).map((numString, i) => {
+      return i !== 3 ? parseInt(numString).toString(16).replace(/^0/, '00') : parseInt(parseFloat(numString) * 10).toString();
+    });
+    return[['#' + [values[0], values[1], values[2]].join('')], [values[3]]]
+  },
+  changeOpacity(val) {
+    this.ctx.strokeStyle = brush.color;
+    let colorString = this.ctx.strokeStyle;
+    console.log(`colorstring: ${colorString}`)
+    if (colorString[0] === '#') {
+      console.log('hit')
+      colorString = this.rgbaVal(colorString, val);
+    } else {
+      colorString = colorString.replace(/\d?\.?\d+\)/, `${(val / 10).toFixed(1)})`)
+    }
+    console.log(`colorstring: ${colorString}`)
+    this.setPrimaryColor(colorString);
+  },
+  rgbaVal(colorString, val) {
+    return `rgba(${colorString.match(/[0-9a-f]{2}/gi).map(val => parseInt(val, 16).toString()).join(',')},${(val / 10).toFixed(1)})`;
   },
   clearCanvas() {
     var canvas = this.canvas;
@@ -523,24 +583,31 @@ $(function () {
     ui.setCursor();
   });
 
-  $('#tree-shadow').click(() => {
-    let $treeShadowBlur = $('#tree-shadow-blur');
-    if ($treeShadowBlur.attr('disabled')) {
-      $treeShadowBlur.removeAttr('disabled');
+  $('#shadow').click(() => {
+    let $shadowBlur = $('#shadow-blur');
+    let $blurLabel = $('label[for=shadow-blur]')
+    if ($shadowBlur.attr('disabled')) {
+      $shadowBlur.removeAttr('disabled');
+      $blurLabel.removeClass('disabled')
     } else {
-      $treeShadowBlur.attr('disabled', 'disabled');
+      $shadowBlur.attr('disabled', 'disabled');
+      $blurLabel.addClass('disabled')
     }
   });
 
   // when color text input changes, update brush.color and redraw the button icons in the new color, update cursor
-  $('#color').on('input', function () {
-    var colorVal = $('#color').delay(100).val();
-    if (colorVal) {
-      brush.color = colorVal;
-    }
-    ui.drawBrushIcons();
-    ui.drawTreeIcon();
-    ui.setCursor();
+  $('#color').on('change', function (e) {
+    var colorVal = $(e.target).delay(100).val();
+    app.setPrimaryColor(colorVal);
+  });
+  $('#colorPicker').on('change', (e) => {
+    var colorVal = $(e.target).val();
+    console.log(colorVal)
+    app.setPrimaryColor(colorVal);
+  });
+
+  $('#opacity').on('input',(e) =>  {
+    app.changeOpacity($(e.target).val());
   });
 
   // when focus is taken off color text input, add new color to hint list if

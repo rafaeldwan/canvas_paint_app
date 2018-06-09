@@ -3,31 +3,35 @@
 
 ## Features
 
-**NEW** Tree generator "brush" with slide-in options shadow toggle and shadow blur slider
+- **NEW** Color picker
+- **NEW** Brush opacity slider
+- **NEW** Brush shadow toggle and blur slider
 
-6 resizable brushes and an eraser
+- **NEW** Tree generator brush
 
-multilevel undo / redo with bound hotkeys, corresponding buttons disabled when unavailable
+- 6 resizable brushes and an eraser
 
-Canvas clearing
+- multilevel undo / redo with bound hotkeys, corresponding buttons disabled when unavailable
 
-Color selection via textstring, hintlist
+- Canvas clearing
 
-New colors dynamically added to hintlist, persisted with localStorage
+- Color selection via textstring, hintlist
 
-Saving images to to onpage gallery
+- New colors dynamically added to hintlist, persisted with localStorage
 
-Onpage gallery persisted with localStorage
+- Saving images to to onpage gallery
 
-Convert to grayscale
+- Onpage gallery persisted with localStorage
 
-Invert colors
+- Convert to grayscale
 
-Gallery images can be loaded onto main canvas from gallery, loaded on top of current image, deleted from page and memory
+- Invert colors
 
-Dynamically redrawn tool buttons and brush cursor reflect current size and color (doesn't work on IE / Edge)
+- Gallery images can be loaded onto main canvas from gallery, loaded on top of current image, deleted from page and memory
 
-Object Oriented code
+- Dynamically redrawn tool buttons and brush cursor reflect current size and color (doesn't work on IE / Edge)
+
+- Object Oriented code
 
 *tech used: HTML, CSS, Javascript, jQuery*
 
