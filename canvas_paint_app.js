@@ -704,8 +704,10 @@ $(function () {
 
   function processTouchstart(e) {
     // debugger;
-    app.registerCanvasChange();
-    e = setTouchEventOffset(e);
+    if (e.touches.length === 1) {
+      app.registerCanvasChange();
+      e = setTouchEventOffset(e);
+    }
 
     brush.tipDown = true;
     brush.paint(app.ctx, e);
@@ -713,12 +715,14 @@ $(function () {
   }
 
   function processTouchmove(e) {
-    e.preventDefault();
-    e = setTouchEventOffset(e);
-    if (brush.tipDown) {
-      brush.paint(app.ctx, e);
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      e = setTouchEventOffset(e);
+      if (brush.tipDown) {
+        brush.paint(app.ctx, e);
+      }
+      log(`touchmove: ${e.changedTouches[0].pageX}, ${e.changedTouches[0].pageY}`);
     }
-    log(`touchmove: ${e.changedTouches[0].pageX}, ${e.changedTouches[0].pageY}`);
   }
 
   function processTouchcancel(e) {
