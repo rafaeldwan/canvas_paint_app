@@ -1,8 +1,10 @@
+const log = (x) => console.log(x);
+
 const INITIAL_BRANCH_ANGLE_RANGES = [[150, 90], [90, 30]],
   TRUNK_SCALE = 7, // multiplied by brush size for trunk length
   TRUNK_TO_FIRST_BRANCH_SCALE = 0.6;
 
-const INITIAL_BRUSH_COLOR = 'rgba(0, 102, 204, .7)'
+const INITIAL_BRUSH_COLOR = 'rgba(0, 102, 204, .7)';
 
 const Tree = {
   currentBranchId: 0,
@@ -39,9 +41,9 @@ const Tree = {
 
     let currentNode = BNode.createInitial(x, y - this.trunkLength);
     ctx.lineTo(currentNode.x, currentNode.y);
-    console.log(ctx.strokeStyle)
+    console.log(ctx.strokeStyle);
     ctx.stroke();
-    ctx.closePath()
+    ctx.closePath();
     this.branchNodes.push(currentNode);
   },
   drawBranches(ctx) {
@@ -65,9 +67,9 @@ const Tree = {
       // debugger;
       if (this.decreaseLineSize()) {
         this.lineWidth = Math.floor(this.lineWidth * 0.9);
-        ctx.stroke()
-        ctx.closePath()
-        ctx.beginPath()
+        ctx.stroke();
+        ctx.closePath();
+        ctx.beginPath();
         ctx.lineWidth = this.lineWidth;
       }
       if (random.rollDice() >= 5) {
@@ -170,7 +172,7 @@ const random = {
 var brush = {
   cursorSize: 12,
   type: 'tri',
-  color: 'rgba(0, 102, 204, .7)',
+  color: INITIAL_BRUSH_COLOR,
   tipDown: false,
   // drawShape functions -must be called by a canvas' context
 
@@ -333,12 +335,12 @@ var ui = {
     ui.drawBrushIcons();
     ui.drawTreeIcon();
     ui.setCursor();
-    ui.setColorControls(colorInfo)
+    ui.setColorControls(colorInfo);
   },
   setColorControls(colorInfo) {
-    $('#colorPicker').val(colorInfo[0])
-    $('#color').val(brush.color)
-    $('#opacity').val(colorInfo[1])
+    $('#colorPicker').val(colorInfo[0]);
+    $('#color').val(brush.color);
+    $('#opacity').val(colorInfo[1]);
   },
 };
 
@@ -396,7 +398,7 @@ var app = {
     this.ctx.strokeStyle = brush.color;
     this.ctx.fillStyle = brush.color;
     let colorInfo = this.getColorInfo(this.ctx.strokeStyle);
-    console.log(colorInfo)
+    console.log(colorInfo);
     ui.update(colorInfo);
   },
   getColorInfo(string) {
@@ -407,19 +409,17 @@ var app = {
     let values = string.match(/0?\.?\d+/g).map((numString, i) => {
       return i !== 3 ? parseInt(numString).toString(16).replace(/^0/, '00') : parseInt(parseFloat(numString) * 10).toString();
     });
-    return[['#' + [values[0], values[1], values[2]].join('')], [values[3]]]
+    return[['#' + [values[0], values[1], values[2]].join('')], [values[3]]];
   },
   changeOpacity(val) {
     this.ctx.strokeStyle = brush.color;
     let colorString = this.ctx.strokeStyle;
-    console.log(`colorstring: ${colorString}`)
     if (colorString[0] === '#') {
-      console.log('hit')
+      console.log('hit');
       colorString = this.rgbaVal(colorString, val);
     } else {
-      colorString = colorString.replace(/\d?\.?\d+\)/, `${(val / 10).toFixed(1)})`)
+      colorString = colorString.replace(/\d?\.?\d+\)/, `${(val / 10).toFixed(1)})`);
     }
-    console.log(`colorstring: ${colorString}`)
     this.setPrimaryColor(colorString);
   },
   rgbaVal(colorString, val) {
@@ -585,13 +585,13 @@ $(function () {
 
   $('#shadow').click(() => {
     let $shadowBlur = $('#shadow-blur');
-    let $blurLabel = $('label[for=shadow-blur]')
+    let $blurLabel = $('label[for=shadow-blur]');
     if ($shadowBlur.attr('disabled')) {
       $shadowBlur.removeAttr('disabled');
-      $blurLabel.removeClass('disabled')
+      $blurLabel.removeClass('disabled');
     } else {
       $shadowBlur.attr('disabled', 'disabled');
-      $blurLabel.addClass('disabled')
+      $blurLabel.addClass('disabled');
     }
   });
 
@@ -602,7 +602,7 @@ $(function () {
   });
   $('#colorPicker').on('change', (e) => {
     var colorVal = $(e.target).val();
-    console.log(colorVal)
+    console.log(colorVal);
     app.setPrimaryColor(colorVal);
   });
 
@@ -689,4 +689,52 @@ $(function () {
   $(window).on('unload', function () {
     app.updateLocalStorage();
   });
+
+  // experimental
+
+  $(app.canvas).on('touchstart', function(e) {processTouchstart(e.originalEvent)});
+  $(app.canvas).on('touchmove', function(e) {processTouchmove(e.originalEvent);});
+  $(app.canvas).on('touchcancel', function(e) {processTouchcancel(e.originalEvent);});
+  $(app.canvas).on('touchend', function(e) {processTouchend(e.originalEvent);});
+
+// app.canvas.addEventListener('touchstart', process_touchstart, false);
+// app.canvas.addEventListener('touchmove', process_touchmove, false);
+// app.canvas.addEventListener('touchcancel', process_touchcancel, false);
+// app.canvas.addEventListener('touchend', process_touchend, false);
+
+  function processTouchstart(e) {
+    // debugger;
+    app.registerCanvasChange();
+    e = setTouchEventOffset(e);
+
+    brush.tipDown = true;
+    brush.paint(app.ctx, e);
+    log('touchstart');
+  }
+
+  function processTouchmove(e) {
+    e.preventDefault();
+    e = setTouchEventOffset(e);
+    if (brush.tipDown) {
+      brush.paint(app.ctx, e);
+    }
+    log(`touchmove: ${e.changedTouches[0].pageX}, ${e.changedTouches[0].pageY}`);
+  }
+
+  function processTouchcancel(e) {
+    log(`touchcancel: ${Object.entries(e.touches)}`);
+  }
+
+  function processTouchend(e) {
+    if (brush.tipDown) {
+      brush.tipDown = false;
+    }
+    log(`touchend: ${Object.entries(e.touches)}`);
+  }
 });
+
+const setTouchEventOffset = (touchEvent) => {
+  touchEvent.offsetX = touchEvent.touches[0].pageX - $(app.canvas).offset().left;
+  touchEvent.offsetY = touchEvent.touches[0].pageY - $(app.canvas).offset().top;
+  return touchEvent;
+};
