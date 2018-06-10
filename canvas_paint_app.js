@@ -734,6 +734,7 @@ $(function () {
 });
 
 const setTouchEventOffset = (touchEvent) => {
+  console.log(touchEvent.touches.length)
   touchEvent.offsetX = touchEvent.touches[0].pageX - $(app.canvas).offset().left;
   touchEvent.offsetY = touchEvent.touches[0].pageY - $(app.canvas).offset().top;
   return touchEvent;
